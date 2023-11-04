@@ -1,177 +1,302 @@
-<script src="https://maps.googleapis.com/maps/api/js?key=[your-api-key]&libraries=geometry"></script>
+<script
+    src="https://maps.googleapis.com/maps/api/js?key=[your API key]&libraries=geometry,places"></script>
 
-<div id="cpaModal" class="cpa-modal">
-  <!-- Modal content -->
-  <div class="cpa-modal-content">
-    <span class="cpa-close" onclick="hide_cpa_modal();">&times;</span>
-    <h3 class="cpa-modal-title">Check Product Availability</h3>
-    <div class="cpa-modal-body">
-      <input type="text" id="delivery_address" name="availability_postcode" class="enq_control cpa-margin txtPostalCode" placeholder="Enter delivery address to browse">
-      <input type="hidden" class="postcode" value="">
-      <button type="button" name="check_avail" class="button cpa-margin" onclick="availability_check();">Continue</button>
-      <div class="cpa-form-message cpa-margin" id="delivery_response"></div>
+<div id="cpaModal" class="cpa-modal" style="display: none;">
+    <!-- Modal content -->
+    <div class="cpa-modal-content">
+        <span class="cpa-close" onclick="hide_cpa_modal();">&times;</span>
+        <h3 class="cpa-modal-title">Check Product Availability</h3>
+        <div class="cpa-modal-body">
+            <div class="modal-body-inner">
+                <input type="text" id="delivery_address" name="availability_postcode"
+                    class="enq_control cpa-margin txtPostalCode" placeholder="Enter delivery address">
+                <input type="hidden" class="postcode" value="">
+                <button type="button" name="check_avail" class="button cpa-margin"
+                    onclick="checkLocation(event);">Continue</button>
+            </div>
+            <div class="cpa-form-message cpa-margin" id="delivery_response"></div>
+        </div>
     </div>
-  </div>
 </div>
 
+<style>
+    .check_availability_button {
+        margin-top: 10px;
+    }
+
+    #cpaModal {
+        position: fixed;
+        width: 100%;
+        height: 100vh;
+        background-color: #00000080;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        margin: auto;
+        justify-content: center;
+        align-items: center;
+        z-index: 999;
+    }
+
+    .cpa-modal-content {
+        background-color: #fff;
+        width: 720px;
+        padding: 80px 50px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 15px;
+        position: relative;
+    }
+
+    .cpa-modal-body {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .modal-body-inner {
+        width: 100%;
+        display: flex;
+        justify-content: center;
+        gap: 10px;
+    }
+
+    #delivery_address {
+        width: 50%;
+    }
+
+    .cpa-close {
+        position: absolute;
+        top: 2px;
+        right: 10px;
+        font-size: 24px;
+    }
+
+    #delivery_response {
+        margin-top: 25px;
+    }
+</style>
+
 <script>
+
     var trigger = getCookie('trigger') || '0';
-  // Step 1: Hide the "Add to Cart" buttons
-  var addToCartButtons = document.querySelectorAll('a.add_to_cart_button');
-  var singleAddToCartButtons = document.querySelectorAll('form.cart');
-
-  addToCartButtons.forEach(function (button) {
-    button.style.display = 'none';
-  });
-
-  singleAddToCartButtons.forEach(function (button) {
-    button.style.display = 'none';
-  });
-
-  // Step 2: Create and append the "Check Availability" button for each product
-  var productContainers = document.querySelectorAll('.astra-shop-summary-wrap, div.entry-summary');
-
-  var newButtons = [];
-
-  productContainers.forEach(function (container) {
-  var newButton = document.createElement('button');
-  newButton.className = 'check_availability_button';
-  newButton.textContent = 'Check Availability';
-  newButton.onclick = show_cpa_modal;
-  container.appendChild(newButton);
-  newButtons.push(newButton);
-});
-
-  var popup_box = document.getElementById("cpaModal");
-
-  function show_cpa_modal() {
-    popup_box.style.display = "block";
-  }
-
-  function hide_cpa_modal() {
-    popup_box.style.display = "none";
-  }
-
-
-
-
-  function availability_check() {
-
-
-
-    // Postal codes to check against
-    var postalCodes = [
-      '6005', '6006', '6007', '6008', '6009', '6010', '6011', '6012', '6014', '6015', '6016', '6017', '6018', '6019', '6020',
-      '6021', '6022', '6023', '6024', '6025', '6026', '6027', '6028', '6029', '6030', '6031', '6032', '6034', '6036', '6055',
-      '6056', '6057', '6058', '6059', '6060', '6061', '6062', '6063', '6064', '6065', '6066', '6067', '6068', '6069', '6070',
-      '6071', '6073', '6076', '6084', '6090', '6102', '6107', '6108', '6109', '6110', '6111', '6112', '6121', '6122', '6123',
-      '6147', '6148', '6149', '6150', '6151', '6152', '6153', '6154', '6155', '6156', '6157', '6158', '6159', '6160', '6162',
-      '6163', '6164', '6165', '6166', '6167', '6168', '6169', '6170', '6171', '6809', '6817', '6820', '6827', '6830', '6937',
-      '6938', '6940', '6000', '6003', '6004', '6050', '6051', '6052', '6053', '6054', '6101', '6105', '6106', '6103', '6104'
-    ];
-
-    // Address to check
-    var address = document.getElementById("delivery_address").value;
-    var response_field = document.getElementById("delivery_response");
-
-
-    var geocoder = new google.maps.Geocoder();
-  geocoder.geocode({ 'address': address }, function (results, status) {
-      
-
-      
-    if (status == google.maps.GeocoderStatus.OK) {
-      var postalCode = results[0].address_components.find(function (component) {
-        return component.types.includes('postal_code');
-        console.log("postalCode");
-      });
-
-      var response_msg;
-
-      if (postalCode && postalCodes.includes(postalCode.short_name)) {
-        response_msg = "Yes, we are delivering at this place!";
-        trigger = 1;
-
-      } else {
-        response_msg = "Sorry, we are not delivering at this place right now! Please enter a different address to continue.";
-
-      }
-
-      response_field.innerHTML = response_msg;
-              // Store the trigger value in localStorage
-              setCookie('trigger', trigger, 30);
-
-              if (trigger == 1) {
-
-                setTimeout(function() {
-      popup_box.style.display = "none";
-    }, 1500);
+    // Step 1: Hide the "Add to Cart" buttons
+    var addToCartButtons = document.querySelectorAll('.add_to_cart_button');
+    var singleAddToCartButtons = document.querySelectorAll('.single_add_to_cart_button');
+    var qtyWrap = document.querySelectorAll('.quantity_wrap');
+    var stickyAddToCartButtons = document.querySelectorAll('a.liquory-sticky-add-to-cart__content-button');
 
     addToCartButtons.forEach(function (button) {
-      button.style.display = 'block';
+        button.style.display = 'none';
+        button.style.pointerEvents = 'none';
+    });
+
+    qtyWrap.forEach(function (button) {
+        button.style.display = 'none';
+        button.style.pointerEvents = 'none';
     });
 
     singleAddToCartButtons.forEach(function (button) {
-      button.style.display = 'block';
+        button.style.display = 'none';
+        button.style.pointerEvents = 'none';
     });
 
-// Hide all the "Check Availability" buttons
-newButtons.forEach(function (button) {
-  button.style.display = 'none';
-});
+    stickyAddToCartButtons.forEach(function (button) {
+        button.style.display = 'none';
+        button.style.pointerEvents = 'none';
+    });
+
+    // Step 2: Create and append the "Check Availability" button for each product
+    var productContainers = document.querySelectorAll('.product-caption-bottom');
+    var stickyContainers = document.querySelectorAll('div.liquory-sticky-add-to-cart__content');
+
+    var newButtons = [];
 
 
-  }
+    productContainers.forEach(function (container) {
+        var newButton = document.createElement('button');
+        newButton.className = 'check_availability_button';
+        newButton.type = 'button';
+        newButton.textContent = 'Check Availability';
+        newButton.onclick = show_cpa_modal;
+        container.insertBefore(newButton, container.children[1]);
+        newButtons.push(newButton);
+    });
 
+    stickyContainers.forEach(function (container) {
+        var newButton = document.createElement('button');
+        newButton.className = 'check_availability_button';
+        newButton.type = 'button';
+        newButton.textContent = 'Check Availability';
+        newButton.onclick = show_cpa_modal;
+        container.appendChild(newButton);
+        newButtons.push(newButton);
+    });
+
+    var popup_box = document.getElementById("cpaModal");
+
+    function show_cpa_modal() {
+        popup_box.style.display = "flex";
     }
-  });
-}
 
-// Function to get the value of a cookie
-function getCookie(name) {
-  var cookieArr = document.cookie.split(';');
-  for (var i = 0; i < cookieArr.length; i++) {
-    var cookiePair = cookieArr[i].split('=');
-    if (name == cookiePair[0].trim()) {
-      return decodeURIComponent(cookiePair[1]);
+    function hide_cpa_modal() {
+        popup_box.style.display = "none";
     }
-  }
-  return null;
-}
-
-// Function to set the value of a cookie
-function setCookie(name, value, days) {
-  var expires = '';
-  if (days) {
-    var date = new Date();
-    date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
-    expires = '; expires=' + date.toUTCString();
-  }
-  document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/';
-}
-
-window.addEventListener("load", (event) => {
-    
-
-    
-  if (trigger == 1) {
-popup_box.style.display = "none";
-
-addToCartButtons.forEach(function (button) {
-button.style.display = 'block';
-});
-
-singleAddToCartButtons.forEach(function (button) {
-button.style.display = 'block';
-});
-
-// Hide all the "Check Availability" buttons
-newButtons.forEach(function (button) {
-button.style.display = 'none';
-});
 
 
-}
-});
+
+    function checkLocation(event) {
+
+        event.preventDefault();
+
+        // Postal codes to check against
+        var postalCodes = [
+            '6005', '6006', '6007', '6008', '6009', '6010', '6011', '6012', '6014', '6015', '6016', '6017', '6018', '6019', '6020',
+            '6021', '6022', '6023', '6024', '6025', '6026', '6027', '6028', '6029', '6030', '6031', '6032', '6034', '6036', '6055',
+            '6056', '6057', '6058', '6059', '6060', '6061', '6062', '6063', '6064', '6065', '6066', '6067', '6068', '6069', '6070',
+            '6071', '6073', '6076', '6084', '6090', '6102', '6107', '6108', '6109', '6110', '6111', '6112', '6121', '6122', '6123',
+            '6147', '6148', '6149', '6150', '6151', '6152', '6153', '6154', '6155', '6156', '6157', '6158', '6159', '6160', '6162',
+            '6163', '6164', '6165', '6166', '6167', '6168', '6169', '6170', '6171', '6809', '6817', '6820', '6827', '6830', '6937',
+            '6938', '6940', '6000', '6003', '6004', '6050', '6051', '6052', '6053', '6054', '6101', '6105', '6106', '6103', '6104'
+        ];
+
+        // Address to check
+        var address = document.getElementById("delivery_address").value;
+        var response_field = document.getElementById("delivery_response");
+
+
+        var geocoder = new google.maps.Geocoder();
+        geocoder.geocode({ 'address': address }, function (results, status) {
+
+
+
+            if (status == google.maps.GeocoderStatus.OK) {
+                var postalCode = results[0].address_components.find(function (component) {
+                    return component.types.includes('postal_code');
+                });
+
+                var response_msg;
+
+                if (postalCode && postalCodes.includes(postalCode.short_name)) {
+                    response_msg = "Yes, we are delivering at this place!";
+                    trigger = 1;
+
+                } else {
+                    response_msg = "Sorry, we are not delivering at this place right now! Please enter a different address to continue.";
+
+                }
+
+                response_field.innerHTML = response_msg;
+                // Store the trigger value in localStorage
+                setCookie('trigger', trigger, 30);
+
+                if (trigger == 1) {
+
+                    setTimeout(function () {
+                        popup_box.style.display = "none";
+                    }, 1500);
+
+                    addToCartButtons.forEach(function (button) {
+                        button.style.display = 'block';
+                        button.style.pointerEvents = 'all';
+                    });
+
+                    qtyWrap.forEach(function (button) {
+                        button.style.display = 'block';
+                        button.style.pointerEvents = 'all';
+                    });
+
+                    singleAddToCartButtons.forEach(function (button) {
+                        button.style.display = 'block';
+                        button.style.pointerEvents = 'all';
+                    });
+
+                    stickyAddToCartButtons.forEach(function (button) {
+                        button.style.display = 'block';
+                        button.style.pointerEvents = 'all';
+                    });
+
+                    // Hide all the "Check Availability" buttons
+                    newButtons.forEach(function (button) {
+                        button.style.display = 'none';
+                    });
+
+
+                }
+
+            }
+        });
+    }
+
+    // Function to get the value of a cookie
+    function getCookie(name) {
+        var cookieArr = document.cookie.split(';');
+        for (var i = 0; i < cookieArr.length; i++) {
+            var cookiePair = cookieArr[i].split('=');
+            if (name == cookiePair[0].trim()) {
+                return decodeURIComponent(cookiePair[1]);
+            }
+        }
+        return null;
+    }
+
+    // Function to set the value of a cookie
+    function setCookie(name, value, days) {
+        var expires = '';
+        if (days) {
+            var date = new Date();
+            date.setTime(date.getTime() + (days * 24 * 60 * 60 * 1000));
+            expires = '; expires=' + date.toUTCString();
+        }
+        document.cookie = name + '=' + encodeURIComponent(value) + expires + '; path=/';
+    }
+
+    window.addEventListener("load", (event) => {
+
+
+
+        if (trigger == 1) {
+
+            popup_box.style.display = "none";
+
+            addToCartButtons.forEach(function (button) {
+                button.style.display = 'block';
+                button.style.pointerEvents = 'all';
+            });
+
+            qtyWrap.forEach(function (button) {
+                button.style.display = 'block';
+                button.style.pointerEvents = 'all';
+            });
+
+            singleAddToCartButtons.forEach(function (button) {
+                button.style.display = 'block';
+                button.style.pointerEvents = 'all';
+            });
+
+            stickyAddToCartButtons.forEach(function (button) {
+                button.style.display = 'block';
+                button.style.pointerEvents = 'all';
+            });
+
+            // Hide all the "Check Availability" buttons
+            newButtons.forEach(function (button) {
+                button.style.display = 'none';
+            });
+
+
+        }
+    });
+
+    // This function initializes the Places Autocomplete service
+    function initAutocomplete() {
+        var input = document.getElementById('delivery_address');
+        var autocomplete = new google.maps.places.Autocomplete(input);
+    }
+
+    google.maps.event.addDomListener(window, 'load', initAutocomplete);
 
 </script>
